@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pydantic
+langchain_openai
+langgraph
+langchain_core
+python-dotenv
+google-auth
+google-api-python-client
+langchain-nvidia-ai-endpoints
