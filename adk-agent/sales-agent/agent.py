@@ -3,7 +3,7 @@ from zoneinfo import ZoneInfo
 from google.adk.agents import LlmAgent
 from google.adk.models.lite_llm import LiteLlm
 from .tools import registrar_cliente, contar_registros, get_current_date
-from .prompts import MODEL_SYSTEM_MESSAGE, CREATE_MEMORY_INSTRUCTION
+from .prompts import MODEL_SYSTEM_MESSAGE
 
 root_agent = LlmAgent(
     name="weather_time_agent",
