@@ -29,7 +29,7 @@ class ChatbotGraph:
             
             response = self.model.invoke([SystemMessage(content=system_msg)] + state["messages"])
 
-            return {"messages": [response]}
+            return {"messages": [response]} 
 
         # Define the graph
         builder = StateGraph(MessagesState)
