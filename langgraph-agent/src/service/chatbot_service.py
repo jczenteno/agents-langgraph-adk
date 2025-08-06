@@ -23,8 +23,7 @@ class ChatbotService:
     
     @classmethod
     async def get_chat_history(cls, user: str) -> Dict[str, Any]:
-        graph = cls.get_chatbot_graph()
-        history = graph.get_chat_history(user)
+        history = cls._chatbot_graph.get_chat_history(user)
         
         return {
             "user": user,

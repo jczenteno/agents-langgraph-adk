@@ -1,7 +1,7 @@
 from typing import Dict, Any, List
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import HumanMessage, SystemMessage, BaseMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, BaseMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import StateGraph, MessagesState, START, END
 from src.agent.tools import registrar_cliente, contar_registros, get_current_date
@@ -70,11 +70,30 @@ class ChatbotGraph:
         
         # Convertir los mensajes a un formato más simple para la API
         formatted_messages = []
-        for m in state["messages"]: 
+        print(state["messages"])
+        for m in state["messages"]:
             if isinstance(m, BaseMessage):
-                formatted_messages.append({
+                message_data = {
                     "role": m.type,
-                    "content": m.content
-                })
+                    "text": m.content  # Valor por defecto
+                }
+                
+                # Caso especial para AIMessage con tool_calls
+                if isinstance(m, AIMessage) and hasattr(m, 'tool_calls') and m.tool_calls:
+                    tool_calls_content = []
+                    for tool_call in m.tool_calls:
+                        tool_info = {
+                            "tool_name": tool_call.get("name", ""),
+                            "parameters": tool_call.get("args", {})
+                        }
+                        tool_calls_content.append(tool_info)
+                    
+                    # Si hay tool_calls, sobrescribimos el content
+                    message_data["content"] = {
+                        "tool_calls": tool_calls_content,
+                        "original_content": m.content  # Mantenemos el original por si acaso
+                    }
+                
+                formatted_messages.append(message_data)
         
         return formatted_messages
