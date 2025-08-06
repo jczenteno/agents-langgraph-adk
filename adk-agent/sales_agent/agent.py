@@ -4,7 +4,7 @@ from .tools import registrar_cliente, contar_registros, get_current_date
 from .prompts import MODEL_SYSTEM_MESSAGE
 
 root_agent = LlmAgent(
-    name="sales-agent",
+    name="sales_agent",
     model=LiteLlm(model="openai/gpt-4o-mini"),
     description=(
         "Agente de ventas."
