@@ -7,26 +7,12 @@ def map_from_waha_to_langgraph(request: WahaRequest) -> Dict[str, str]:
         "user": request.payload.from_
     }
 
-def map_from_langgraph_to_waha(
-    user: str, 
-    answer: str, 
-    session: str,
-    reply_to: Optional[str] = None,
-    link_preview: bool = True,
-    link_preview_high_quality: bool = False
-) -> Dict[str, Any]:
-    return {
-        "chatId": user,
-        "reply_to": reply_to,
-        "text": answer,
-        "linkPreview": link_preview,
-        "linkPreviewHighQuality": link_preview_high_quality,
-        "session": session
-    }
+def map_from_langgraph_to_waha(data: Dict[str, Any]) -> str:
+    return data['answer']
 
 def map_from_waha_to_adk(request: WahaRequest) -> Dict[str, Any]:
     return {
-        "app_name": "sales-agent",
+        "app_name": "sales_agent",
         "user_id": request.payload.from_,
         "session_id": request.payload.from_,
         "new_message": {
@@ -45,7 +31,7 @@ def map_from_adk_to_waha(adk_response: List[Dict[str, Any]]) -> str:
     if not adk_response or len(adk_response) == 0:
         return "Lo siento, no pude generar una respuesta."
     
-    first_response = adk_response[0]
+    first_response = adk_response[-1]
     content = first_response.get("content", {})
     parts = content.get("parts", [])
     

@@ -1,16 +1,23 @@
 from typing import Callable
 from fastapi import APIRouter
 import httpx
+import logging
 from src.entities.chatbot_entities import WahaRequest
 from src.mapper.waha_mapper import map_from_waha_to_langgraph, map_from_langgraph_to_waha, map_from_waha_to_adk, map_from_adk_to_waha
 import os
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/waha", tags=["waha"])
 
-async def send_waha_message(user: str, message: str, session: str):
+async def send_waha_message(chatId: str, text: str):
     """Send a message to WAHA API sendText endpoint"""
     try:
-        payload = map_from_langgraph_to_waha(user, message, session)
+        payload = {
+            "chatId": chatId,
+            "text": text,
+            "session": 'default'
+        }
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{os.getenv('WAHA_API_URL')}/api/sendText",
@@ -20,7 +27,7 @@ async def send_waha_message(user: str, message: str, session: str):
             response.raise_for_status()
             return response.json()
     except Exception as e:
-        print(f"Error sending message to WAHA: {str(e)}")
+        logger.error(f"Error sending message to WAHA: {str(e)}")
         return None
 
 
@@ -33,31 +40,52 @@ async def handle_error_response(request: WahaRequest, user_message: str, technic
     return error_response
 
 @router.post("/webhook/langgraph", summary="Process webhook")
-async def chatbot_endpoint(request: WahaRequest):
-    return await webhook(request, map_from_waha_to_langgraph, map_from_langgraph_to_waha)
+async def chatbot_langgraph(request: WahaRequest):
+    return await webhook(request, map_from_waha_to_langgraph, map_from_langgraph_to_waha, "/api/chatbot")
 
 @router.post("/webhook/adk", summary="Process webhook")
-async def adk_endpoint(request: WahaRequest):
-    return await webhook(request, map_from_waha_to_adk, map_from_adk_to_waha)
+async def chatbot_adk(request: WahaRequest):
+    # Crear una sesion en ADK
+    user = request.payload.from_
+    logger.info(f"Creating session for user: {user}")
+    try:
+        async with httpx.AsyncClient() as client:
+            chatbot_response = await client.post(
+                f"{os.getenv('CHATBOT_API_URL')}/apps/sales_agent/users/{user}/sessions/{user}",
+                json={},
+                headers={"Content-Type": "application/json"}
+            )
+            chatbot_response.raise_for_status()
+            chatbot_data = chatbot_response.json()
+        logger.info(f"Session response: {chatbot_data}")
+    except Exception as e:
+        logger.warning(f"An error occurred: {str(e)}")
 
 
-async def webhook(request: WahaRequest, mapperIn: Callable, mapperOut: Callable):
-    print(f"Received webhook request: {request}")
+    return await webhook(request, map_from_waha_to_adk, map_from_adk_to_waha, "/run")
+
+
+async def webhook(request: WahaRequest, mapperIn: Callable, mapperOut: Callable, path: str):
+    logger.info(f"Received webhook request: {request}")
     try:
         chatbot_payload = mapperIn(request)
+
+        logger.info(f"Calling chatbot API at: {os.getenv('CHATBOT_API_URL')}")
         
         # Call the chatbot API
         async with httpx.AsyncClient() as client:
             chatbot_response = await client.post(
-                f"{os.getenv('CHATBOT_API_URL')}/api/chatbot",
+                f"{os.getenv('CHATBOT_API_URL')}{path}",
                 json=chatbot_payload,
                 headers={"Content-Type": "application/json"}
             )
             chatbot_response.raise_for_status()
             chatbot_data = chatbot_response.json()
+
+        logger.info(f"Chatbot API response: {chatbot_data}")
         
         # Validate chatbot API response
-        if chatbot_response.status_code != 200 or chatbot_data.get("status") != "success":
+        if chatbot_response.status_code != 200:
             return await handle_error_response(
                 request,
                 "Lo siento, no puedo procesar tu mensaje en este momento. Por favor intenta nuevamente más tarde.",
@@ -69,9 +97,8 @@ async def webhook(request: WahaRequest, mapperIn: Callable, mapperOut: Callable)
         
         # Send the chatbot response to WAHA
         send_data = await send_waha_message(
-            user=request.payload.from_,
-            message=response_text,
-            session=request.session
+            chatId=request.payload.from_,
+            text=response_text
         )
         
         return {
@@ -82,7 +109,7 @@ async def webhook(request: WahaRequest, mapperIn: Callable, mapperOut: Callable)
         }
         
     except Exception as e:
-        print(f"An error occurred: {str(e)}")
+        logger.error(f"An error occurred: {str(e)}")
         return await handle_error_response(
             request,
             "Lo siento, ocurrió un error inesperado. Por favor intenta nuevamente más tarde.",
