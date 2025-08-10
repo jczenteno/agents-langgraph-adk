@@ -43,8 +43,7 @@ def registrar_cliente(email: str, nombres: str, apellidos: str, numero_documento
         else:
             # Cloud Run: usar Application Default Credentials
             credentials, _ = default(scopes=scopes)
-            
-        print("Usando Application Default Credentials")
+            print("Usando Application Default Credentials")
         #credentials = Credentials.from_service_account_file(scopes=scopes)
         service = build('sheets', 'v4', credentials=credentials)
 
@@ -128,6 +127,7 @@ def contar_registros():
         else:
             # Cloud Run: usar Application Default Credentials
             credentials, _ = default(scopes=scopes)
+            print("Usando Application Default Credentials")
 
         # Crear el servicio de Google Sheets
         service = build('sheets', 'v4', credentials=credentials)
