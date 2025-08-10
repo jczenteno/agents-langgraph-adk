@@ -9,7 +9,7 @@ def map_from_waha_to_langgraph(request: WahaRequest) -> Dict[str, str]:
 
 def map_from_langgraph_to_waha(
     user: str, 
-    response_text: str, 
+    answer: str, 
     session: str,
     reply_to: Optional[str] = None,
     link_preview: bool = True,
@@ -18,7 +18,7 @@ def map_from_langgraph_to_waha(
     return {
         "chatId": user,
         "reply_to": reply_to,
-        "text": response_text,
+        "text": answer,
         "linkPreview": link_preview,
         "linkPreviewHighQuality": link_preview_high_quality,
         "session": session
